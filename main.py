@@ -1,8 +1,9 @@
 import os
 import logging
 
-import src.helpers as h
-import src.dataBase as db
+import src.helpers as helpers
+
+import db as DB
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
@@ -17,12 +18,10 @@ dp = Dispatcher(bot)
 
 
 def secure_auth(func):
-    
     async def wrapper(message):
         if message['from']['id'] != 673084689:
             return await message.reply("Access Denied",reply=False)
         return await func(message)
-
     return wrapper
 
 
@@ -37,18 +36,18 @@ async def welcome_msg(message: types.Message):
         "📁 Выгрузить Excel файл: /excel")
 
 
-@dp.message_handler(commands=["statistics"])
+@dp.message_handler(commands=["category"])
 @secure_auth
 async def show_statistics(message: types.Message):
-    await message.answer(db.expense_data)
+    await message.answer(helpers.show_category())
 
 
 @dp.message_handler()
 @secure_auth
 async def add_expense(message: types.Message):
     try:
-        expense = message.text.split()
-        h.db_add_expense(expense[0],expense[1])
+        expense = helpers.parse_expense(message.text)
+        DB.sql_update(con,expense)
         await bot.send_message(message.chat.id, expense)
     except IndexError:
         await bot.send_message(message.chat.id, "Не понял тебя")
@@ -56,4 +55,5 @@ async def add_expense(message: types.Message):
 
 
 if __name__ == '__main__':
+    con = DB.connect()
     executor.start_polling(dp, skip_updates=True)
